@@ -21,7 +21,7 @@
     "lucide-react": "^0.525.0",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react-dom": "^19.3.0",
     "react-router-dom": "^6.30.1",
     "zustand": "^5.0.6"
   },
@@ -29,7 +29,7 @@
     "@tailwindcss/vite": "^4.1.11",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.23",
-    "@types/react-dom": "^18.3.7",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^4.6.0",
     "tailwindcss": "^4.1.11",
     "vite": "^6.3.5"
