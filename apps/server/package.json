@@ -18,7 +18,7 @@
     "@enclavier/crypto": "*",
     "@enclavier/shared": "*",
     "@fastify/helmet": "^13.0.1",
-    "@fastify/rate-limit": "^10.3.0",
+    "@fastify/rate-limit": "^11.2.0",
     "@node-saml/node-saml": "^5.1.0",
     "@simplewebauthn/server": "^13.3.3",
     "fastify": "^5.4.0",
