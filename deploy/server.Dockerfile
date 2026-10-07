@@ -1,5 +1,5 @@
 # Build context: repository root.  docker build -f deploy/server.Dockerfile .
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/crypto/package.json packages/crypto/
@@ -12,7 +12,7 @@ COPY packages packages
 COPY apps/server apps/server
 RUN npm run build -w @enclavier/server && npm prune --omit=dev --no-audit --no-fund
 
-FROM node:22-alpine
+FROM node:26-alpine
 WORKDIR /app
 ARG ENCLAVIER_VERSION=dev
 ENV NODE_ENV=production ENCLAVIER_VERSION=${ENCLAVIER_VERSION}

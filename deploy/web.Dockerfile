@@ -1,5 +1,5 @@
 # Build context: repository root.  docker build -f deploy/web.Dockerfile .
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/crypto/package.json packages/crypto/
