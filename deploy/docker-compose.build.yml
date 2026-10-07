@@ -1,0 +1,15 @@
+# Build the images from this source checkout instead of pulling them.
+# The installer adds this file automatically (COMPOSE_FILE in .env) when it
+# finds the source tree next to deploy/.
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/server.Dockerfile
+      args:
+        ENCLAVIER_VERSION: ${ENCLAVIER_VERSION:-dev}
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/web.Dockerfile

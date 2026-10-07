@@ -1,0 +1,29 @@
+{
+  "name": "enclavier",
+  "private": true,
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "description": "Enclavier: open-source, zero-knowledge password and secrets manager for teams",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:server": "npm run dev -w @enclavier/server",
+    "dev:web": "npm run dev -w @enclavier/web",
+    "build": "npm run build -w @enclavier/server && npm run build -w @enclavier/web",
+    "test": "npm run test -w @enclavier/crypto && npm run test -w @enclavier/extension && npm run test -w @enclavier/server",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "db:migrate": "npm run migrate -w @enclavier/server",
+    "build:extension": "npm run build -w @enclavier/extension",
+    "build:desktop": "npm run build -w @enclavier/desktop",
+    "bundle": "bash deploy/make-bundle.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^5.0.2"
+  }
+}

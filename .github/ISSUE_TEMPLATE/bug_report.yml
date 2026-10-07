@@ -1,0 +1,41 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security problem?** Do not file it here. See SECURITY.md.
+        Never paste passwords, tokens or your `.env` file.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where does it happen?
+      options: [Web vault, Server / API, Browser extension, Windows app, Self-host installer or scripts, Documentation]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From `./enclavier status`, or the release you downloaded.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you do?
+      description: Steps to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: For the server, `./enclavier logs server`. Remove anything sensitive.

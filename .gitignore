@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.vite/
+release/
+backups/
+apps/desktop/app/
+apps/desktop/build/

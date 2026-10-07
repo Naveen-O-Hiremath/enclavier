@@ -1,0 +1,42 @@
+{
+  "name": "@enclavier/desktop",
+  "productName": "Enclavier",
+  "version": "0.1.0",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "description": "Enclavier desktop app for Windows",
+  "author": "Code Arrive <team@codearrive.in>",
+  "main": "app/main.cjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node build.mjs",
+    "build:app": "tsc -p tsconfig.json && node build.mjs --no-installer",
+    "start": "node build.mjs --no-installer && electron .",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
+    "esbuild": "^0.25.0"
+  },
+  "build": {
+    "appId": "in.codearrive.enclavier",
+    "productName": "Enclavier",
+    "copyright": "Copyright © Code Arrive. Licensed under AGPL-3.0.",
+    "files": ["app/**", "package.json"],
+    "directories": { "output": "release", "buildResources": "build" },
+    "asar": true,
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png",
+      "artifactName": "Enclavier-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Enclavier",
+      "uninstallDisplayName": "Enclavier"
+    }
+  }
+}

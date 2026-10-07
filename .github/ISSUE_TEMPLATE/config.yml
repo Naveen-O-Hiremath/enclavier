@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: mailto:team@codearrive.in
+    about: Please report security problems privately. See SECURITY.md.

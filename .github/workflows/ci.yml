@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: enclavier
+          POSTGRES_PASSWORD: enclavier
+          POSTGRES_DB: enclavier_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U enclavier -d enclavier_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://enclavier:enclavier@localhost:5432/enclavier_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests
+        run: npm test
+      - name: Build web vault
+        run: npm run build -w @enclavier/web
+      - name: Build browser extension
+        run: npm run build:extension
+      - name: Dependency audit (production)
+        run: npm audit --omit=dev --audit-level=high
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker images
+        run: |
+          docker build -f deploy/server.Dockerfile -t enclavier/server:ci .
+          docker build -f deploy/web.Dockerfile -t enclavier/web:ci .
+      - name: Installer scripts parse
+        run: bash -n deploy/install.sh && bash -n deploy/enclavier && bash -n deploy/make-bundle.sh

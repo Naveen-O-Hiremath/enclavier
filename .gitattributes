@@ -1,0 +1,9 @@
+# Shell scripts and container files must keep LF endings, even on Windows checkouts.
+* text=auto
+*.sh text eol=lf
+deploy/enclavier text eol=lf
+deploy/Caddyfile text eol=lf
+*.Dockerfile text eol=lf
+*.yml text eol=lf
+*.ps1 text eol=crlf
+*.png binary

@@ -1,0 +1,102 @@
+# Self-hosted Enclavier.
+#
+# Easiest: run the installer, which creates .env (with fresh secrets) and
+# starts everything:
+#     ./install.sh --domain vault.example.com      (Linux)
+#     .\install.ps1 -Domain vault.example.com      (Windows Server)
+# Day-to-day: ./enclavier status | update | backup | restore | logs
+#
+# This file only references images, so it works from a release bundle, an
+# offline bundle or a registry. docker-compose.build.yml adds the build
+# instructions when you run from a source checkout.
+name: enclavier
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: enclavier
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: enclavier
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U enclavier -d enclavier']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [backend]
+
+  server:
+    image: ${ENCLAVIER_SERVER_IMAGE:-enclavier/server}:${ENCLAVIER_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://enclavier:${POSTGRES_PASSWORD}@db:5432/enclavier
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+      SERVER_SECRET: ${SERVER_SECRET:?set SERVER_SECRET}
+      SIGNUPS_ENABLED: ${SIGNUPS_ENABLED:-true}
+      TRUST_PROXY: 'true'
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      # Self-hosted: allow SIEM destinations on your internal network.
+      ALLOW_PRIVATE_LOG_DESTINATIONS: ${ALLOW_PRIVATE_LOG_DESTINATIONS:-false}
+      ALLOW_PRIVATE_SSO_ENDPOINTS: ${ALLOW_PRIVATE_SSO_ENDPOINTS:-false}
+      # Pwned Passwords range API or an offline mirror; empty disables breach checks.
+      HIBP_API_URL: ${HIBP_API_URL-https://api.pwnedpasswords.com}
+      HIBP_API_KEY: ${HIBP_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-Enclavier <no-reply@enclavier.local>}
+    # The backend network is internal; the server also joins "frontend" so it
+    # can reach the SMTP server on the internet.
+    networks: [backend, frontend]
+
+  web:
+    image: ${ENCLAVIER_WEB_IMAGE:-enclavier/web}:${ENCLAVIER_VERSION:-latest}
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_healthy
+    ports:
+      # With the built-in HTTPS proxy the installer binds this to 127.0.0.1.
+      - '${ENCLAVIER_BIND:-0.0.0.0}:${ENCLAVIER_PORT:-8080}:80'
+    networks: [frontend]
+
+  # Built-in HTTPS (optional): automatic Let's Encrypt certificates for
+  # ENCLAVIER_DOMAIN. Enabled with COMPOSE_PROFILES=tls (the installer sets it
+  # when you pass a domain). Skip it if you already have a load balancer or
+  # reverse proxy that terminates TLS.
+  proxy:
+    image: caddy:2-alpine
+    profiles: [tls]
+    restart: unless-stopped
+    depends_on: [web]
+    environment:
+      ENCLAVIER_DOMAIN: ${ENCLAVIER_DOMAIN:-localhost}
+    ports:
+      - '${ENCLAVIER_HTTP_PORT:-80}:80'
+      - '${ENCLAVIER_HTTPS_PORT:-443}:443'
+      - '${ENCLAVIER_HTTPS_PORT:-443}:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [frontend]
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  backend:
+    internal: true
+  frontend:

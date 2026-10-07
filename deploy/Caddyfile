@@ -1,0 +1,10 @@
+# Built-in HTTPS for Enclavier (docker compose profile "tls").
+# Certificates are requested and renewed automatically from Let's Encrypt.
+# The domain must point at this server and ports 80 and 443 must be reachable.
+# For "localhost" (or with no public DNS) Caddy issues a certificate from its
+# own local CA instead.
+{$ENCLAVIER_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy web:80
+}

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Day-to-day management of a self-hosted Enclavier (run from the deploy folder).
+set -euo pipefail
+cd "$(dirname "$0")"
+
+usage() {
+  cat <<'EOF'
+Usage: ./enclavier <command>
+
+  status              Show containers, version and health
+  start | stop | restart
+  logs [service]      Follow logs (server, web, db, proxy)
+  update [version]    Pull (or rebuild) and restart on a new version; backs up first
+  backup [dir]        Write a backup archive (database + .env) to ./backups or dir
+  restore <file>      Restore the database from a backup archive
+  verify-audit        Check the tamper-evident audit log
+  test-mail <address> Send a test e-mail with the SMTP settings
+  uninstall           Stop and remove containers (data volumes are kept)
+EOF
+}
+
+die() { printf '\033[1;31mError:\033[0m %s\n' "$*" >&2; exit 1; }
+say() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
+[ -f .env ] || die "No .env here. Run ./install.sh first."
+dc() { docker compose "$@"; }
+builds() { grep -q '^COMPOSE_FILE=.*docker-compose.build.yml' .env; }
+
+backup() {
+  local dir="${1:-backups}" stamp tmp out
+  stamp="$(date -u +%Y%m%d-%H%M%S)"
+  mkdir -p "$dir"
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  say "Dumping the database"
+  dc exec -T db pg_dump -U enclavier -d enclavier --format=custom --no-owner > "$tmp/db.dump"
+  [ -s "$tmp/db.dump" ] || die "The database dump is empty."
+  cp .env "$tmp/env"
+  dc exec -T server sh -c 'echo "${ENCLAVIER_VERSION:-unknown}"' > "$tmp/VERSION" 2>/dev/null || echo unknown > "$tmp/VERSION"
+  out="$dir/enclavier-$stamp.tar.gz"
+  ( umask 077; tar -czf "$out" -C "$tmp" db.dump env VERSION )
+  say "Backup written to $out"
+  echo "    It contains your server secrets and every user's encrypted vault. Store it"
+  echo "    encrypted and off this machine. Vault contents stay unreadable without each"
+  echo "    user's master password."
+}
+
+restore() {
+  local file="${1:-}" tmp
+  [ -n "$file" ] && [ -f "$file" ] || die "Usage: ./enclavier restore <backup.tar.gz>"
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  tar -xzf "$file" -C "$tmp"
+  [ -s "$tmp/db.dump" ] || die "This archive has no database dump."
+  if ! cmp -s "$tmp/env" .env; then
+    echo "The .env in this backup differs from the current one. If SERVER_SECRET differs,"
+    echo "restore the backup's .env first (it is inside the archive as 'env')."
+  fi
+  printf 'This replaces ALL current Enclavier data with the backup. Type "restore" to continue: '
+  read -r answer
+  [ "$answer" = "restore" ] || die "Cancelled."
+  say "Stopping the server"
+  dc stop server web
+  say "Restoring the database"
+  dc exec -T db psql -U enclavier -d postgres -q -c "DROP DATABASE IF EXISTS enclavier WITH (FORCE);" -c "CREATE DATABASE enclavier OWNER enclavier;"
+  dc exec -T db pg_restore -U enclavier -d enclavier --no-owner --exit-on-error < "$tmp/db.dump"
+  say "Starting"
+  dc up -d
+  say "Restore complete. Run ./enclavier verify-audit to check the audit log."
+}
+
+case "${1:-}" in
+  status)
+    dc ps
+    echo
+    printf 'Version: '; dc exec -T server sh -c 'echo "${ENCLAVIER_VERSION:-unknown}"' 2>/dev/null || echo "not running"
+    printf 'Health:  '; dc exec -T server wget -qO- http://127.0.0.1:8080/health 2>/dev/null || echo "unhealthy"
+    echo
+    ;;
+  start) dc up -d ;;
+  stop) dc stop ;;
+  restart) dc up -d --force-recreate server web ;;
+  logs) shift; dc logs -f --tail 200 "$@" ;;
+  update)
+    backup backups
+    if [ -n "${2:-}" ]; then
+      if grep -q '^ENCLAVIER_VERSION=' .env; then sed -i.bak "s/^ENCLAVIER_VERSION=.*/ENCLAVIER_VERSION=$2/" .env && rm -f .env.bak
+      else echo "ENCLAVIER_VERSION=$2" >> .env; fi
+    fi
+    if builds; then say "Rebuilding from source"; dc up -d --build
+    else say "Pulling images"; dc pull; dc up -d; fi
+    say "Updated. Database migrations run automatically when the server starts."
+    ;;
+  backup) backup "${2:-backups}" ;;
+  restore) restore "${2:-}" ;;
+  verify-audit) dc exec -T server node apps/server/dist/verify-audit.js ;;
+  test-mail) [ -n "${2:-}" ] || die "Usage: ./enclavier test-mail you@example.com"; dc exec -T server node apps/server/dist/test-mail.js "$2" ;;
+  uninstall)
+    printf 'Stop and remove the Enclavier containers? Data volumes are kept. [y/N] '
+    read -r a; [ "$a" = "y" ] || die "Cancelled."
+    dc down
+    echo "Removed. To delete all data as well: docker compose down -v"
+    ;;
+  ""|-h|--help|help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac
