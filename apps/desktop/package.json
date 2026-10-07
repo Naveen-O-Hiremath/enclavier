@@ -16,7 +16,7 @@
   "devDependencies": {
     "electron": "^44.5.1",
     "electron-builder": "^26.15.3",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.28.2"
   },
   "build": {
     "appId": "in.codearrive.enclavier",
