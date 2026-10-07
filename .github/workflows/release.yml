@@ -39,7 +39,7 @@ jobs:
               docker push "${{ steps.v.outputs.registry }}/enclavier-$name:$tag"
             done
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: bundles
           path: release/*
@@ -59,7 +59,7 @@ jobs:
           mkdir -p out
           (cd apps/extension/dist/chrome && zip -qr "../../../../out/enclavier-extension-chrome-${GITHUB_REF_NAME#v}.zip" .)
           (cd apps/extension/dist/firefox && zip -qr "../../../../out/enclavier-extension-firefox-${GITHUB_REF_NAME#v}.zip" .)
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: extension
           path: out/*
@@ -79,7 +79,7 @@ jobs:
           # Optional code signing: add these repository secrets to sign the installer.
           CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: desktop
           path: apps/desktop/release/*.exe
